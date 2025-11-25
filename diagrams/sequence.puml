@@ -1,0 +1,50 @@
+@startuml
+title AI Miško Asistentas - Sequence: Capture Photo & Get Identification
+
+actor ForagerUser as User
+participant "MobileApp/WebClient" as Client
+participant "APIServer" as API
+participant "ImagePreprocessor" as Preproc
+participant "MLInferenceServer\n(InferenceService)" as ML
+database "DatabaseServer" as DB
+participant "MonitoringService" as Mon
+
+User -> Client : openApp()
+Client -> API : GET /session
+API -> Client : session / loginRequired
+
+alt login required
+  User -> Client : enterCredentials()
+  Client -> API : POST /login(email, password)
+  API -> DB : query User by email
+  DB --> API : User
+  API -> Client : authToken
+end
+
+User -> Client : CapturePhoto()
+Client -> Client : captureImageFromCamera()
+Client -> API : POST /identify(image, authToken)
+
+API -> Preproc : preprocess(image)
+Preproc --> API : preprocessedImage
+
+API -> ML : predictSpecies(preprocessedImage)
+ML -> DB : getSpeciesById(predictedSpeciesId)
+DB --> ML : Species
+ML --> API : IdentificationResult(confidenceScore, species)
+
+API -> API : evaluateConfidence(threshold)
+
+alt confidence >= threshold
+  API -> DB : save IdentificationRequest & Result
+  API -> Mon : logRequest(user, result: SUCCESS)
+  API -> Client : IdentificationResult(latinName, confidenceScore, status=SUCCESS)
+else confidence < threshold
+  API -> DB : save IdentificationRequest & Result(status=UNKNOWN)
+  API -> DB : mark ImageSample as UNKNOWN
+  API -> DB : create Alert(severity=WARNING, message="Unknown species")
+  API -> Mon : logRequest(user, result: UNKNOWN)
+  API -> Client : IdentificationResult(status=UNKNOWN,\nmessage="Forwarded to experts")
+end
+
+@enduml

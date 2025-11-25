@@ -1,0 +1,46 @@
+@startuml
+title AI Miško Asistentas - Simplified Use Case Diagram
+
+left to right direction
+
+actor User
+actor Ranger
+actor Researcher
+actor Admin
+actor MonitoringSystem
+
+rectangle "AI Miško Asistentas" {
+
+  (Register / Login) as Auth
+  (Identify Species) as Identify
+  (View Species Info) as ViewInfo
+  (Report Unknown Species) as Report
+  (Review & Label Species) as Review
+  (View Alerts) as Alerts
+  (Manage System Data) as ManageData
+  (Manage Users) as ManageUsers
+  (View Metrics) as Metrics
+}
+
+User --> Auth
+User --> Identify
+User --> ViewInfo
+User --> Report
+
+Ranger --> Identify
+Ranger --> ViewInfo
+Ranger --> Review
+Ranger --> Alerts
+
+Researcher --> Review
+Researcher --> ManageData
+Researcher --> Alerts
+
+Admin --> ManageUsers
+Admin --> ManageData
+Admin --> Metrics
+Admin --> Alerts
+
+MonitoringSystem --> Metrics
+
+@enduml

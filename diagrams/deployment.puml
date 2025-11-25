@@ -1,0 +1,61 @@
+@startuml
+title AI Miško Asistentas - Deployment Diagram
+
+node "UserDevice" {
+  component "MobileApp" as MobileApp
+  component "WebClient" as WebClient
+}
+
+node "APIServer" {
+  component "REST API" as RestAPI
+  component "AuthService" as AuthSvc
+}
+
+node "MLServer" {
+  component "InferenceService" as InferSvc
+  component "Model\n(transfer learning CNN)" as CNNModel
+}
+
+node "TrainingServer" {
+  component "TrainingService" as TrainSvc
+}
+
+node "DatabaseServer" {
+  database "MainDB" as MainDB
+}
+
+node "FileStorage" {
+  component "Image Object Storage" as ImgStore
+}
+
+node "MonitoringServer" {
+  component "Logging" as Logging
+  component "Metrics" as Metrics
+  component "Alerting" as Alerting
+}
+
+' Connections
+MobileApp --> RestAPI : HTTPS
+WebClient --> RestAPI : HTTPS
+
+RestAPI --> AuthSvc : internal calls
+RestAPI --> InferSvc : HTTP/gRPC
+RestAPI --> MainDB : DB connection
+RestAPI --> ImgStore : file upload/download
+RestAPI --> Logging : log events
+RestAPI --> Metrics : push metrics
+
+InferSvc --> CNNModel : in-process
+InferSvc --> MainDB : read Species
+
+TrainSvc --> MainDB : read/write datasets & metadata
+TrainSvc --> ImgStore : access training images
+TrainSvc --> CNNModel : update model artifacts
+TrainSvc --> Metrics : training metrics
+TrainSvc --> Logging : training logs
+TrainSvc --> Alerting : training failure alerts
+
+Metrics --> Alerting : threshold-based alerts
+Logging --> Alerting : error-based alerts
+
+@enduml

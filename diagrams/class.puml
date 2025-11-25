@@ -1,0 +1,220 @@
+@startuml
+title AI Miško Asistentas - Class Diagram
+
+' Enums
+enum UserRole {
+  FORAGER
+  RANGER
+  RESEARCHER
+  ADMIN
+}
+
+enum LabelStatus {
+  PENDING
+  LABELED
+  UNKNOWN
+}
+
+enum ToxicityLevel {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum IdentificationStatus {
+  SUCCESS
+  UNKNOWN
+  ERROR
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+' Domain classes
+class User {
+  +userId: UUID
+  +name: String
+  +email: String
+  +passwordHash: String
+  +role: UserRole
+  --
+  +register()
+  +login(password: String): boolean
+}
+
+class Species {
+  +speciesId: UUID
+  +latinName: String
+  +commonNameLt: String
+  +toxicityLevel: ToxicityLevel
+  +invasiveFlag: boolean
+}
+
+class ImageSample {
+  +imageId: UUID
+  +filePathOrUrl: String
+  +captureTime: DateTime
+  +gpsLocation: String
+  +labelStatus: LabelStatus
+  --
+  +markUnknown()
+}
+
+class IdentificationRequest {
+  +requestId: UUID
+  +requestTime: DateTime
+  --
+  +create()
+}
+
+class IdentificationResult {
+  +resultId: UUID
+  +confidenceScore: float
+  +status: IdentificationStatus
+  --
+  +isHighConfidence(threshold: float): boolean
+}
+
+class Alert {
+  +alertId: UUID
+  +severity: AlertSeverity
+  +createdAt: DateTime
+  +message: String
+}
+
+class Feedback {
+  +feedbackId: UUID
+  +comment: String
+  +createdAt: DateTime
+}
+
+class Dataset {
+  +datasetId: UUID
+  +name: String
+  +description: String
+  +version: String
+}
+
+class Model {
+  +modelId: UUID
+  +name: String
+  +version: String
+  +createdAt: DateTime
+  +accuracyMetric: float
+}
+
+' Service / utility classes
+class ImagePreprocessor {
+  +resize(image: ImageSample): ImageSample
+  +normalize(image: ImageSample): ImageSample
+  +augment(image: ImageSample): ImageSample
+}
+
+class InferenceService {
+  +currentModel: Model
+  --
+  +predictSpecies(image: ImageSample): IdentificationResult
+}
+
+class TrainingService {
+  +trainNewModel(dataset: Dataset): Model
+  +scheduleRetraining()
+}
+
+class MonitoringService {
+  +logRequest(user: User, result: IdentificationResult)
+  +logMetric(name: String, value: float)
+}
+
+class AuthService {
+  +authenticate(email: String, password: String): User
+  +authorize(user: User, permission: String): boolean
+}
+
+interface SpeciesRepository {
+  +findById(id: UUID): Species
+  +findByLatinName(name: String): Species
+  +save(species: Species)
+}
+
+interface UserRepository {
+  +findById(id: UUID): User
+  +findByEmail(email: String): User
+  +save(user: User)
+}
+
+interface ImageRepository {
+  +findById(id: UUID): ImageSample
+  +save(image: ImageSample)
+}
+
+interface IdentificationRequestRepository {
+  +save(request: IdentificationRequest)
+}
+
+interface IdentificationResultRepository {
+  +save(result: IdentificationResult)
+}
+
+interface AlertRepository {
+  +save(alert: Alert)
+}
+
+interface FeedbackRepository {
+  +save(feedback: Feedback)
+}
+
+interface DatasetRepository {
+  +save(dataset: Dataset)
+  +getLatest(): Dataset
+}
+
+interface ModelRepository {
+  +save(model: Model)
+  +getActiveModel(): Model
+}
+
+' Relationships
+User "1" o-- "0..*" IdentificationRequest
+User "1" o-- "0..*" ImageSample : uploadedBy
+User "1" o-- "0..*" Alert : createdBy
+User "1" o-- "0..*" Feedback : createdBy
+
+Species "1" o-- "0..*" IdentificationResult
+Species "1" o-- "0..*" Alert
+
+ImageSample "1" o-- "0..1" IdentificationRequest : inputImage
+IdentificationRequest "1" o-- "1" IdentificationResult
+IdentificationResult "1" o-- "0..*" Feedback
+
+Dataset "1" o-- "0..*" ImageSample
+Dataset "1" o-- "0..*" Species
+Dataset "1" o-- "0..*" IdentificationResult
+
+Dataset "1" <-- "0..*" Model : trainingDataset
+
+InferenceService --> ModelRepository
+InferenceService --> SpeciesRepository
+InferenceService --> MonitoringService
+InferenceService --> ImagePreprocessor
+
+TrainingService --> DatasetRepository
+TrainingService --> ModelRepository
+TrainingService --> MonitoringService
+
+AuthService --> UserRepository
+
+MonitoringService --> AlertRepository
+
+ImageRepository --> ImageSample
+IdentificationRequestRepository --> IdentificationRequest
+IdentificationResultRepository --> IdentificationResult
+FeedbackRepository --> Feedback
+SpeciesRepository --> Species
+UserRepository --> User
+
+@enduml

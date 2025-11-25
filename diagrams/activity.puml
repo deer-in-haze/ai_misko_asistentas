@@ -1,0 +1,37 @@
+@startuml
+title AI Miško Asistentas - Activity: Photo to Latin Name or Expert Review
+
+start
+
+partition "User/App" {
+  :User captures photo;
+  :Upload photo to server;
+}
+
+partition "Backend/Model" {
+  :Preprocess image;
+  :Run model inference;
+  :Evaluate confidence;
+}
+
+if (Confidence >= threshold?) then (Yes)
+  partition "Backend/Model" {
+    :Map prediction to Species;
+  }
+  partition "User/App" {
+    :Return species latin name\nand confidence to user;
+  }
+  stop
+else (No)
+  partition "Backend/Model" {
+    :Mark sample as UNKNOWN;
+    :Create Alert for experts;
+    :Store sample & metadata\nfor retraining dataset;
+  }
+  partition "Experts/Researchers" {
+    :Experts review unknown samples\nand label data later;
+  }
+  stop
+endif
+
+@enduml
